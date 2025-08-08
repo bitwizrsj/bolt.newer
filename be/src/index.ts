@@ -17,21 +17,28 @@ app.use(express.json())
 app.post("/template", async (req, res) => {
     const prompt = req.body.prompt;
     
+    console.log("Received template request:", prompt);
+    
     try {
         const response = await groq.chat.completions.create({
             messages: [{
                 role: 'user', 
                 content: prompt
+            }, {
+                role: 'system',
+                content: "Return either node or react based on what do you think this project should be. Only return a single word either 'node' or 'react'. Do not return anything extra"
             }],
-            model: 'llama-3.1-70b-versatile',
+            model: 'llama3-8b-8192',
             max_tokens: 200,
-            temperature: 0.1,
-            system: "Return either node or react based on what do you think this project should be. Only return a single word either 'node' or 'react'. Do not return anything extra"
+            temperature: 0.1
         });
 
+        console.log("GROQ response:", response.choices[0]?.message?.content);
+        
         const answer = response.choices[0]?.message?.content?.trim().toLowerCase();
         
         if (answer === "react") {
+            console.log("Detected React project");
             res.json({
                 prompts: [BASE_PROMPT, `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
                 uiPrompts: [reactBasePrompt]
@@ -40,6 +47,7 @@ app.post("/template", async (req, res) => {
         }
 
         if (answer === "node") {
+            console.log("Detected Node project");
             res.json({
                 prompts: [`Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${nodeBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
                 uiPrompts: [nodeBasePrompt]
@@ -48,6 +56,7 @@ app.post("/template", async (req, res) => {
         }
 
         // Default to react if unclear
+        console.log("Defaulting to React project");
         res.json({
             prompts: [BASE_PROMPT, `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${reactBasePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`],
             uiPrompts: [reactBasePrompt]
@@ -61,6 +70,8 @@ app.post("/template", async (req, res) => {
 app.post("/chat", async (req, res) => {
     const messages = req.body.messages;
     
+    console.log("Received chat request with", messages.length, "messages");
+    
     try {
         const response = await groq.chat.completions.create({
             messages: [
@@ -70,12 +81,12 @@ app.post("/chat", async (req, res) => {
                 },
                 ...messages
             ],
-            model: 'llama-3.1-70b-versatile',
+            model: 'llama3-8b-8192',
             max_tokens: 8000,
             temperature: 0.1
         });
 
-        console.log(response);
+        console.log("Chat response received, length:", response.choices[0]?.message?.content?.length);
 
         res.json({
             response: response.choices[0]?.message?.content || "No response generated"
