@@ -29,7 +29,7 @@ export function Builder() {
   const [llmMessages, setLlmMessages] = useState<{role: "user" | "assistant", content: string;}[]>([]);
   const [loading, setLoading] = useState(false);
   const [templateSet, setTemplateSet] = useState(false);
-  const webcontainer = useWebContainer();
+  const { webcontainer, loading: webContainerLoading } = useWebContainer();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [activeTab, setActiveTab] = useState<'code' | 'preview'>('code');
@@ -146,7 +146,10 @@ export function Builder() {
   
     // Mount the structure if WebContainer is available
     console.log(mountStructure);
-    webcontainer?.mount(mountStructure);
+    if (webcontainer && Object.keys(mountStructure).length > 0) {
+      console.log("Mounting files to WebContainer...");
+      webcontainer.mount(mountStructure);
+    }
   }, [files, webcontainer]);
 
   async function init() {
@@ -271,7 +274,7 @@ export function Builder() {
               {activeTab === 'code' ? (
                 <CodeEditor file={selectedFile} />
               ) : (
-                <PreviewFrame webContainer={webcontainer} files={files} />
+                <PreviewFrame webContainer={webcontainer!} files={files} />
               )}
             </div>
           </div>
